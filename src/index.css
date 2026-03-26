@@ -18,6 +18,14 @@
   100% { transform: scale(1); } /* 休息 */
 }
 
+/* 2b. 常规心跳动画（标题/按钮图标） */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  45% { transform: scale(1); }
+  60% { transform: scale(1.08); }
+}
+
 /* 3. 灵动的悬浮 (T2D) - 像水滴一样上下漂浮且形变 */
 @keyframes float-elastic {
   0%, 100% { transform: translateY(0) scale(1); }
@@ -49,6 +57,10 @@
   /* 替换 @apply text-red-500 transition-colors; */
   color: var(--color-red-500);       /* v4 直接支持这种变量 */
   transition: color 0.15s ease;      /* 标准 CSS 过渡 */
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.6s ease-in-out infinite;
 }
 
 /* 糖尿病：灵动悬浮 (无限循环) */

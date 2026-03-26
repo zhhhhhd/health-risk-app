@@ -10,6 +10,11 @@ import {
   BarChart3, BookOpen
 } from 'lucide-react';
 
+const SPORT_MET_WEIGHTS = {
+  high: 8.0,
+  low: 3.3,
+};
+
 
 // ---- Cox 模型预测函数 ----
 // LP = Σ βᵢ·(xᵢ - x̄ᵢ)，Risk = 1 - S₀^exp(LP)
@@ -93,7 +98,6 @@ function ModelTransparencyPanel({ activeOutcome, results, currentLayer }) {
     .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
 
   const maxAbsContrib = Math.max(...sortedContribs.map(c => Math.abs(c.contribution)), 0.01);
-  const cIdx = outcome.cIndex?.[currentLayer];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -212,6 +216,25 @@ function FormView({ currentLayer, inputs, setInputs, onAnalyze, validationErrors
     setInputs(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleSportInputChange = (field, value) => {
+    setInputs(prev => {
+      const next = { ...prev, [field]: value };
+      const highHours = parseFloat(next.sport_high_hours);
+      const lowHours = parseFloat(next.sport_low_hours);
+      const hasHigh = next.sport_high_hours !== '' && !isNaN(highHours) && highHours >= 0;
+      const hasLow = next.sport_low_hours !== '' && !isNaN(lowHours) && lowHours >= 0;
+
+      if (hasHigh || hasLow) {
+        const highMetHours = hasHigh ? highHours * SPORT_MET_WEIGHTS.high : 0;
+        const lowMetHours = hasLow ? lowHours * SPORT_MET_WEIGHTS.low : 0;
+        next.sport_total = (highMetHours + lowMetHours).toFixed(2);
+      } else {
+        delete next.sport_total;
+      }
+      return next;
+    });
+  };
+
   const hasErrors = Object.values(validationErrors).some(e => e !== null);
 
   return (
@@ -236,6 +259,18 @@ function FormView({ currentLayer, inputs, setInputs, onAnalyze, validationErrors
         <div className="grid grid-cols-1 gap-5">
           {layerVars.map((v) => {
             const error = validationErrors[v.id];
+            const isSportTotal = v.id === 'sport_total';
+            const highHours = inputs.sport_high_hours ?? '';
+            const lowHours = inputs.sport_low_hours ?? '';
+            const highHoursNumber = parseFloat(highHours);
+            const lowHoursNumber = parseFloat(lowHours);
+            const hasHighInput = highHours !== '' && !isNaN(highHoursNumber) && highHoursNumber >= 0;
+            const hasLowInput = lowHours !== '' && !isNaN(lowHoursNumber) && lowHoursNumber >= 0;
+            const calculatedMetHours = (hasHighInput || hasLowInput)
+              ? (hasHighInput ? highHoursNumber * SPORT_MET_WEIGHTS.high : 0)
+                + (hasLowInput ? lowHoursNumber * SPORT_MET_WEIGHTS.low : 0)
+              : null;
+
             return (
               <div key={v.id} className="relative group">
                 <label className="flex items-center gap-2 text-sm font-bold text-slate-600 mb-2 transition-colors group-focus-within:text-blue-600">
@@ -248,7 +283,55 @@ function FormView({ currentLayer, inputs, setInputs, onAnalyze, validationErrors
                   )}
                 </label>
 
-                {v.type === 'select' ? (
+                {isSportTotal ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          placeholder="高强度时长"
+                          className={`w-full p-3.5 bg-slate-50 rounded-xl border-2 transition-all outline-none font-medium text-slate-700 font-mono placeholder:text-slate-300 ${
+                            error
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-50/50'
+                              : 'border-transparent focus:border-blue-500 focus:ring-blue-50/50'
+                          } focus:bg-white focus:ring-4`}
+                          value={highHours}
+                          onChange={(e) => handleSportInputChange('sport_high_hours', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          min={0}
+                          max={40}
+                          step={0.5}
+                        />
+                        <span className="absolute right-4 top-[14px] text-xs text-slate-400 font-bold">小时/周</span>
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="number"
+                          placeholder="低强度时长"
+                          className={`w-full p-3.5 bg-slate-50 rounded-xl border-2 transition-all outline-none font-medium text-slate-700 font-mono placeholder:text-slate-300 ${
+                            error
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-50/50'
+                              : 'border-transparent focus:border-blue-500 focus:ring-blue-50/50'
+                          } focus:bg-white focus:ring-4`}
+                          value={lowHours}
+                          onChange={(e) => handleSportInputChange('sport_low_hours', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          min={0}
+                          max={80}
+                          step={0.5}
+                        />
+                        <span className="absolute right-4 top-[14px] text-xs text-slate-400 font-bold">小时/周</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                      {calculatedMetHours !== null
+                        ? `自动换算：${calculatedMetHours.toFixed(1)} MET·h/周`
+                        : `高/低强度时长可同时填写，系统自动换算（参考均值：${v.displayMean}）`}
+                    </p>
+                  </div>
+                ) : v.type === 'select' ? (
                   <select
                     className="w-full p-3.5 bg-slate-50 rounded-xl border-2 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all outline-none appearance-none font-medium text-slate-700"
                     value={inputs[v.id] ?? ''}
@@ -297,7 +380,7 @@ function FormView({ currentLayer, inputs, setInputs, onAnalyze, validationErrors
         }`}
       >
         <Stethoscope className="animate-heartbeat group-hover:text-blue-200" size={24} />
-        开始智能评估
+        开始评估
       </button>
     </div>
   );
@@ -460,7 +543,7 @@ function ReportView({ activeOutcome, setActiveOutcome, results, currentLayer, on
       <div className="p-4 bg-amber-50/80 rounded-xl border border-amber-200/60 flex gap-3 items-start">
         <ShieldAlert size={18} className="text-amber-500 mt-0.5 shrink-0" />
         <p className="text-xs text-amber-700 leading-relaxed">
-          本工具基于{MODEL_META.cohortName}（{MODEL_META.followUpYears}）Cox 比例风险模型，
+          本工具基于{MODEL_META.cohortName}Cox 比例风险模型，
           仅供健康风险参考，<strong>不替代临床诊断</strong>。如有不适请及时就医。
         </p>
       </div>
@@ -541,7 +624,7 @@ export default function App() {
         <div className="max-w-md md:max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="font-black text-xl bg-gradient-to-r from-blue-700 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2 tracking-tight">
             <Activity size={24} className="text-blue-600 animate-heartbeat" strokeWidth={2.5} />
-            精准健康分层
+            多结局慢性病风险预测小程序
           </h1>
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-1 text-xs text-slate-400 mr-2">
@@ -606,7 +689,7 @@ export default function App() {
                 </p>
                 <div className="mt-6 p-3 bg-blue-50/60 rounded-lg text-xs text-blue-500 max-w-xs">
                   <Info size={14} className="inline mr-1" />
-                  支持 4 种结局的三层级渐进式风险评估
+                  支持 3 种结局的三层级渐进式风险评估
                 </div>
               </div>
             )}
