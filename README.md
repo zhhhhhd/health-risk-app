@@ -1,16 +1,215 @@
-# React + Vite
+# 多结局慢性病风险预测小程序
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> 基于 Cox 比例风险模型的三层渐进式健康风险评估工具，预测未来 5 年内 2 型糖尿病、心血管疾病及高血压的发病风险。
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 一、项目简介
 
-## React Compiler
+本项目是一款面向普通居民的**慢性病风险预测 Web 应用**，依托房山家系队列（2016-2024）的流行病学数据，采用 Cox 比例风险回归模型，实现对三种主要慢性病的个体化 5 年风险量化评估。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 核心特点
 
-## Expanding the ESLint configuration
+| 特性 | 说明 |
+|------|------|
+| **三层渐进式评估** | 基础信息 → 血液检查 → 血管影像，逐层细化风险预测精度 |
+| **多结局预测** | 同时预测 2 型糖尿病（T2D）、心血管疾病（CVD）、高血压（HT）|
+| **模型透明性** | 内置模型解释面板，展示变量贡献、C-index 等统计指标 |
+| **智能诊断提示** | 自动检测指标是否已达疾病诊断标准，排除已患病结局 |
+| **响应式设计** | 适配桌面端与移动端，支持多种屏幕尺寸 |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 预测结局与模型性能
+
+| 预测结局 | 样本量 | 事件数 | 基线生存率 S₀(t) | C-Index（L1 / L2 / L3）|
+|---------|--------|--------|------------------|------------------------|
+| 2 型糖尿病 | 3,904 | 961 | 0.9477 | 0.667 / 0.722 / 0.733 |
+| 心血管疾病 | 3,396 | 1,898 | 0.7817 | 0.626 / 0.687 / 0.687 |
+| 高血压 | 2,936 | 818 | 0.7955 | 0.647 / 0.728 / 0.750 |
+
+### 风险计算原理
+
+$$Risk(t) = 1 - S_0(t)^{\exp(LP)}$$
+
+其中线性预测值：
+
+$$LP = \sum_{i} \beta_i \cdot (x_i - \bar{x}_i)$$
+
+- $\beta_i$：Cox 回归系数（ln(HR)）
+- $x_i$：个体实测值
+- $\bar{x}_i$：队列人群均值
+
+---
+
+## 二、应用路线图
+
+### Phase 1 — MVP 基础版（已完成）
+
+- [x] Cox 比例风险模型核心计算引擎
+- [x] 三层渐进式数据采集表单（基础信息 / 血液检查 / 血管影像）
+- [x] 三结局风险预测（T2D、CVD、HT）
+- [x] 风险等级分层（高危 >20% / 中危 10-20% / 低危 <10%）
+- [x] 基础报告页面展示
+- [x] GitHub Pages 自动部署
+
+### Phase 2 — 体验优化（已完成）
+
+- [x] 运动量输入简化（高/低强度 × 时长，自动 MET 换算）
+- [x] 疾病诊断自动检测与结局排除逻辑
+- [x] 模型透明性面板（C-index、变量贡献可视化、Cox 公式展示）
+- [x] 个性化健康建议生成
+- [x] 表单实时校验与错误提示
+- [x] CSS 动画与视觉效果优化
+
+### Phase 3 — 交互增强（规划中）
+
+- [ ] 运动量输入进一步简化：改为活动类型选择 + 时长输入
+  - 重体力劳动（8.0 MET）、中等体力劳动（4.0 MET）
+  - 剧烈运动（8.0 MET）、中等运动（4.0 MET）
+  - 散步（3.3 MET）、骑车（6.0 MET）
+  - 自动聚合为 MET·h/week 总值
+- [ ] 分步引导式填写（Wizard / Stepper 模式）
+- [ ] 历史记录本地存储与趋势对比
+- [ ] 报告 PDF 导出 / 截图分享
+
+### Phase 4 — 深度功能（规划中）
+
+- [ ] 风险因素雷达图 / 贡献度排序可视化
+- [ ] 情景模拟（"如果我减重 5kg / 戒烟，风险会如何变化？"）
+- [ ] 多语言支持（中 / 英）
+- [ ] 无障碍（Accessibility）适配
+
+### Phase 5 — 平台化（远期规划）
+
+- [ ] 后端 API 服务（用户数据持久化、隐私合规）
+- [ ] 微信小程序原生版本适配
+- [ ] 与医疗机构 / 体检中心系统对接
+- [ ] 模型在线更新（新队列数据持续迭代）
+
+---
+
+## 三、技术架构
+
+```
+┌─────────────────────────────────────────────────┐
+│                   用户界面层                      │
+│  React 19 + Tailwind CSS + Lucide Icons         │
+│  FormView / ReportView / TransparencyPanel      │
+├─────────────────────────────────────────────────┤
+│                   业务逻辑层                      │
+│  Cox 风险计算引擎（calcCoxRisk）                  │
+│  诊断规则检测 / 结局排除 / 健康建议生成            │
+├─────────────────────────────────────────────────┤
+│                   数据配置层                      │
+│  riskConfig.js — 变量定义 / 模型系数 / 元数据     │
+│  app_coefficients_tier3.csv — 原始模型参数        │
+├─────────────────────────────────────────────────┤
+│                   构建与部署                      │
+│  Vite (Rolldown) → GitHub Actions → GitHub Pages│
+└─────────────────────────────────────────────────┘
+```
+
+### 项目结构
+
+```
+src/
+├── main.jsx          # React 入口
+├── App.jsx           # 主组件（表单、报告、模型透明面板）
+├── App.css           # 组件样式
+├── index.css         # 全局样式与 CSS 动画
+├── riskConfig.js     # 模型配置（变量、系数、元数据）
+└── assets/
+    └── react.svg
+
+.github/workflows/
+└── deploy.yml        # GitHub Pages 自动部署工作流
+
+app_coefficients_tier3.csv   # 第三层模型系数数据
+```
+
+### 三层评估变量
+
+**第一层 — 基础信息**（无需任何检查）
+- 人口学：年龄、性别、BMI、腰围
+- 生活方式：睡眠时长、久坐时间、运动量（MET·h/week）
+- 行为习惯：吸烟状态、饮酒状态
+- 家族史：糖尿病、高血压、脑卒中
+- 已患疾病：糖尿病、高血压、心血管疾病
+
+**第二层 — 血液检查**（需要抽血化验）
+- 血压：收缩压（SBP）、舒张压（DBP）
+- 血糖：空腹血糖（FBG）、糖化血红蛋白（HbA1c）
+- 血脂：总胆固醇（TC）、HDL-C、LDL-C、甘油三酯（TG）、载脂蛋白A（ApoA）
+- 用药：降脂药、降糖药、降压药
+
+**第三层 — 血管影像**（需要专项检查）
+- 踝肱指数（ABI）
+- 脉搏波传导速度（baPWV）
+- 颈动脉内中膜厚度（CCA-IMT）
+
+---
+
+## 四、构建说明
+
+### 环境要求
+
+- **Node.js** ≥ 18.0
+- **npm** ≥ 9.0（或 pnpm / yarn）
+
+### 快速开始
+
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd 风险小程序
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器
+npm run dev
+# 默认访问地址: http://localhost:5173
+
+# 4. 构建生产版本
+npm run build
+# 产物输出至 dist/ 目录
+
+# 5. 本地预览生产构建
+npm run preview
+```
+
+### 常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 启动开发服务器（支持 HMR 热更新）|
+| `npm run build` | 构建生产环境产物 |
+| `npm run preview` | 本地预览生产构建 |
+| `npm run lint` | ESLint 代码检查 |
+
+### 技术栈
+
+| 类别 | 技术 | 版本 |
+|------|------|------|
+| 前端框架 | React | 19.2.0 |
+| 构建工具 | Vite (Rolldown) | 7.2.5 |
+| CSS 框架 | Tailwind CSS | 4.1.18 |
+| 图标库 | Lucide React | 0.563.0 |
+| 工具库 | clsx, tailwind-merge | — |
+| 代码检查 | ESLint + React Hooks Plugin | — |
+| 部署 | GitHub Actions → GitHub Pages | — |
+
+### 部署
+
+项目已配置 GitHub Actions 自动部署。推送至 `main` 分支后，工作流将自动构建并发布至 GitHub Pages。
+
+部署地址：`https://<username>.github.io/health-risk-app/`
+
+如需手动部署至其他平台，将 `dist/` 目录内容上传至任意静态托管服务即可。
+
+---
+
+## 五、数据来源与声明
+
+- **队列数据**：房山家系队列（Fangshan Family Cohort, 2016-2024）
+- **建模方法**：Cox 比例风险回归 + 弹性网（Elastic Net）变量筛选 + 三层嵌套模型评估
+- **免责声明**：本工具仅供健康风险参考，不构成医学诊断。如有健康问题，请咨询专业医疗机构。
